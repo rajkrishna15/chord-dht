@@ -1,0 +1,7 @@
+build/
+ChordNode/node
+ChordNode/*.o
+ChordClient/client
+ChordClient/*.o
+Node[0-9]*/
+Client[0-9]*/
