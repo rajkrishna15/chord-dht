@@ -17,6 +17,7 @@ add_executable(node
 	ChordNode/nodeserver.cpp
 	ChordNode/nodesync.cpp
 	ChordNode/util.cpp
+	ChordNode/log.cpp
 )
 target_link_libraries(node PRIVATE OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
 set_target_properties(node PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/ChordNode")
