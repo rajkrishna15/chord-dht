@@ -1,5 +1,6 @@
 #include "nodeserver.h"
 #include "util.h"
+#include "log.h"
 
 pthread_mutex_t lock0;
 
@@ -11,7 +12,7 @@ void senddata(Node *args){
 
 	int sockfd = newconnection(ipport.first,to_string(ipport.second));
 	if(sockfd == -1){
-				 cout << "newsofd is -1 connection loss senddata" <<  endl;
+				 LOG_WARN("connection loss while sending data to successor " << ipport.first << ":" << ipport.second);
 	}
 
 	string start= "startdownload";
@@ -46,7 +47,7 @@ void changesuccpred(Node *args){
 
 	int sockfd = newconnection(succipport.first,to_string(succipport.second));
 	if(sockfd == -1){
-		 cout << "newsofd is -1 connection loss changepred" <<  endl;
+		 LOG_WARN("connection loss while notifying successor " << succipport.first << ":" << succipport.second << " of predecessor change");
 	}
 
 	string msg= "changepred " + predipport.first + " " + to_string(predipport.second) + " " + to_string(predid);
@@ -65,7 +66,7 @@ void changepredsucc(Node *args){
 
 	int sockfd = newconnection(predipport.first,to_string(predipport.second));
 	if(sockfd == -1){
-				 cout << "newsofd is -1 connection loss changesucc" <<  endl;
+				 LOG_WARN("connection loss while notifying predecessor " << predipport.first << ":" << predipport.second << " of successor change");
 	}
 
 	string msg= "changesucc " + succipport.first + " " + to_string(succipport.second) + " " + to_string(succid);
@@ -222,10 +223,12 @@ void *event(void *fd){
 					}
 				}
 
+				LOG_INFO("predecessor changed from " << prev << " to " << newpred << ", migrating " << newresult.size() << " key(s)");
+
 				if(newresult.size() > 0){
 					int newsockfd = newconnection(predipport.first,to_string(predipport.second));
 					if(newsockfd == -1){
-				 		cout << "newsofd is -1 connection loss in send data" <<  endl;
+				 		LOG_WARN("connection loss while migrating data to new predecessor " << predipport.first << ":" << predipport.second);
 					}
 					string startmsg = "startdownload";
 					send(newsockfd,startmsg.c_str(),startmsg.size(),0); // start msg sended to newpredecessor
@@ -285,7 +288,7 @@ void *event(void *fd){
 			pair<string,long long int> ipport = args->successordetail();
 			int newsockfd = newconnection(ipport.first,to_string(ipport.second));
 			if(newsockfd == -1){
-				 cout << "newsofd is -1 connection loss store data" <<  endl;
+				 LOG_WARN("connection loss while forwarding upload to successor " << ipport.first << ":" << ipport.second);
 			}
 			string msg = "upload " + command[1];
 			send(newsockfd,msg.c_str(),msg.size(),0);
@@ -305,7 +308,7 @@ void *event(void *fd){
 			pair<string,long long int> ipport = args->successordetail();
 			int newsockfd = newconnection(ipport.first,to_string(ipport.second));
 			if(newsockfd == -1){
-				 cout << "newsofd is -1 connection loss in search" <<  endl;
+				 LOG_WARN("connection loss while forwarding search to successor " << ipport.first << ":" << ipport.second);
 			}
 			string msg = "search " + command[1];
 			send(newsockfd,msg.c_str(),msg.size(),0);
@@ -348,6 +351,7 @@ void *event(void *fd){
 	}
 
 	else if(command[0] == "changesucc"){
+		LOG_INFO("successor changed to " << command[3] << " (" << command[1] << ":" << command[2] << ")");
 		args->successor(command[1],atoi(command[2].c_str()),atoi(command[3].c_str()));
 		args->fingersuccessor(command[1],atoi(command[2].c_str()),atoi(command[3].c_str())); //ip //port // id
 		args->nodedetails();

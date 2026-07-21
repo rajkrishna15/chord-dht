@@ -1,5 +1,6 @@
 #include "nodesync.h"
 #include "util.h"
+#include "log.h"
 
 pthread_mutex_t lock1;
 
@@ -22,7 +23,7 @@ void fixfinger(void *fd){
 			pair<string,long long int> ipport = args->successordetail();
 			int newsockfd = newconnection(ipport.first,to_string(ipport.second));
 			if(newsockfd == -1){
-				 cout << "newsofd is -1 connection loss fixfinger" <<  endl;
+				 LOG_WARN("connection loss while resolving finger table entry via " << ipport.first << ":" << ipport.second);
 			}
 			string commandtosend = "findsuccessor " + to_string(requestid); // command to be send to listner "findsuccessor nodeid"
 			
@@ -73,7 +74,7 @@ void *stable(void *fd){
 		// start connection with successor
 		int sockfd = newconnection(neighbour.first , to_string(neighbour.second));
 		if(sockfd == -1){
-				 cout << "newsofd is -1 connection loss in stabalization" <<  endl;
+				 LOG_WARN("connection loss while stabilizing against successor " << neighbour.first << ":" << neighbour.second);
 			}
 
 		string commandtosend = "givepredecessor"; // ask for predecessor
@@ -122,16 +123,17 @@ void *stable(void *fd){
 		}
 
 		if(condition){
-			pthread_mutex_lock(&lock1); 
+			LOG_INFO("stabilization: successor updated to id=" << x << " (" << pred[1] << ":" << pred[2] << ")");
+			pthread_mutex_lock(&lock1);
 			args->successor(pred[1],atoi(pred[2].c_str()),x);
-			pthread_mutex_unlock(&lock1); 
+			pthread_mutex_unlock(&lock1);
 		}
 
 		// new successor if above were true
 		pair<string,long long int> newneighbour = args->successordetail();
 		int newsockfd = newconnection(newneighbour.first , to_string(newneighbour.second));
 		if(newsockfd == -1){
-				 cout << "newsofd is -1 connection loss in stabalization-2" <<  endl;
+				 LOG_WARN("connection loss while notifying successor " << newneighbour.first << ":" << newneighbour.second);
 			}
 
 		string notify = "notify " + args->getip() + " " + to_string(args->getnodeportno()) + " " + to_string(n);
