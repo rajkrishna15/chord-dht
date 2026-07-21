@@ -10,6 +10,7 @@
 #include "util.h"
 #include "nodeserver.h"
 #include "nodesync.h"
+#include "log.h"
 
 using namespace std;
 
@@ -27,6 +28,8 @@ int main()
 
 	string temp;// junk enter char
 	getline(cin,temp);//ignore
+
+	log_init(myip,portno);
 
 	Node currentnode = Node(myip,portno);
 	long long int idd = gethash(myip+":"+to_string(portno));
@@ -54,6 +57,7 @@ int main()
 				string key = myip +":"+ to_string(portno);	// node id = sha("ip:port")
 				long long int id = gethash(key);			// currentnode nodeid, given by sha1 (key = ip+port)
 				currentnode.setid(id);						// set all node values
+				log_set_nodeid(id);
 				currentnode.setringstatus();
 				currentnode.successor(myip,portno,id);
 				currentnode.predecessor("",-1,-1);
@@ -74,9 +78,10 @@ int main()
 				// pthread_create(&f,NULL,fixfinger,(void *)&currentnode);
 				// pthread_detach(f);
 
+				LOG_INFO("created new ring");
 
 			}
-				
+
 			else{
 				cout << "Node is already part of ring" << endl;
 				}
@@ -94,7 +99,7 @@ int main()
 
 			int sockfd = newconnection(command[1],command[2]);
 			if(sockfd == -1){
-				 cout << "newsofd is -1 connection loss join" <<  endl;
+				 LOG_WARN("connection loss while joining via " << command[1] << ":" << command[2]);
 			}
 			
 			string commandtosend = "findsuccessor " + to_string(id); // command to be send to listner "findsuccessor nodeid"
@@ -117,6 +122,7 @@ int main()
 
 			currentnode.predecessor("",-1,-1);
 			currentnode.setid(id);
+			log_set_nodeid(id);
 			currentnode.setringstatus();
 			currentnode.nodedetails();
 			shutdown(sockfd,0);
@@ -136,6 +142,8 @@ int main()
 			// pthread_create(&f,NULL,fixfinger,(void *)&currentnode);
 			// pthread_detach(f);
 
+			LOG_INFO("joined ring via " << command[1] << ":" << command[2]);
+
 			}
 
 		else if(currentnode.ringstatus() == true && command[0] == "temp"){
@@ -152,6 +160,7 @@ int main()
 		else if(currentnode.ringstatus() == true && command[0] == "leave"){
 			currentnode.nodedetails();
 			currentnode.fingerdisplay();
+			LOG_INFO("leaving ring");
 			closeall = false;
 			senddata(&currentnode);
 			if(currentnode.predecessorid() != -1){ // nothing real to report if we never got a predecessor (e.g. a lone node, or not yet stabilized)
